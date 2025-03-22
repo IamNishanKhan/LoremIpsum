@@ -6,7 +6,8 @@ import {
   TextInput, 
   TouchableOpacity, 
   ScrollView,
-  FlatList
+  FlatList,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -27,6 +28,7 @@ const dummyRides = [
     seats_available: 2,
     is_female_only: false,
     host: {
+      id: '1',
       name: 'Ayesha',
       gender: 'female',
       image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
@@ -42,6 +44,7 @@ const dummyRides = [
     seats_available: 3,
     is_female_only: true,
     host: {
+      id: '2',
       name: 'Sarah',
       gender: 'female',
       image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
@@ -78,6 +81,10 @@ export default function RidesScreen() {
 
   const handleRidePress = (rideId: string) => {
     router.push(`/ride/${rideId}`);
+  };
+
+  const handleUserPress = (userId: string) => {
+    router.push(`/user/${userId}`);
   };
 
   const renderRideCard = ({ item }) => (
@@ -120,7 +127,16 @@ export default function RidesScreen() {
         </View>
 
         <View style={styles.hostInfo}>
-          <Text style={styles.hostedBy}>Hosted by {item.host.name}</Text>
+          <TouchableOpacity 
+            style={styles.hostProfile}
+            onPress={() => handleUserPress(item.host.id)}
+          >
+            <Image 
+              source={{ uri: item.host.image }} 
+              style={styles.hostImage} 
+            />
+            <Text style={styles.hostedBy}>Hosted by {item.host.name}</Text>
+          </TouchableOpacity>
         </View>
       </AnimatedPressable>
     </Animated.View>
@@ -449,6 +465,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.light.border,
     paddingTop: 16,
+  },
+  hostProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  hostImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
   },
   hostedBy: {
     fontSize: 14,
