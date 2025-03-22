@@ -1,22 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity,
-  TextInput,
-  Image,
-  FlatList,
-  Modal
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { MapPin, Clock, Users, Car, Send, Star, X } from 'lucide-react-native';
+import { Star, X } from 'lucide-react-native';
 import Colors from '../../constants/Colors';
 import { useToast } from '../../components/ToastProvider';
-import AnimatedPressable from '../../components/AnimatedPressable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import RideDetails from '../../components/Rides/RideDetails';
+import ParticipantsReviews from '../../components/Rides/ParticipantsReviews';
+import GroupChat from '../../components/Rides/GroupChat';
+import { BASE_URL } from '../api_endpoint_url';
 
 const dummyRide = {
   id: '1',
@@ -90,8 +83,6 @@ export default function RideDetailsScreen() {
     }
   };
 
-  const isHost = currentUser?.id === dummyRide.host.id;
-
   const handleJoinRide = () => {
     showToast('Successfully joined the ride!', 'success');
   };
@@ -127,7 +118,6 @@ export default function RideDetailsScreen() {
       return;
     }
 
-    // Update the participants list to mark the user as reviewed
     setParticipants(prev => 
       prev.map(p => 
         p.id === selectedUser.id 
@@ -143,20 +133,7 @@ export default function RideDetailsScreen() {
     setSelectedUser(null);
   };
 
-  const renderChatMessage = ({ item }) => (
-    <View style={[
-      styles.messageContainer,
-      item.sender === dummyRide.host.name ? styles.sentMessage : styles.receivedMessage
-    ]}>
-      <Text style={styles.messageSender}>{item.sender}</Text>
-      <Text style={styles.messageText}>{item.message}</Text>
-      <Text style={styles.messageTime}>
-        {new Date(item.timestamp).toLocaleTimeString()}
-      </Text>
-    </View>
-  );
-
-  const renderStars = (selected = false) => {
+  const renderStars = () => {
     return [...Array(5)].map((_, index) => (
       <TouchableOpacity
         key={index}
@@ -194,133 +171,29 @@ export default function RideDetailsScreen() {
       </View>
 
       {activeTab === 'details' ? (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.section}>
-            <TouchableOpacity 
-              style={styles.hostInfo}
-              onPress={() => handleUserPress(dummyRide.host.id)}
-            >
-              <Image source={{ uri: dummyRide.host.image }} style={styles.hostImage} />
-              <View style={styles.hostDetails}>
-                <Text style={styles.hostName}>{dummyRide.host.name}</Text>
-                <Text style={styles.hostLabel}>Host</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.detailRow}>
-              <Car size={20} color={Colors.light.primary} />
-              <Text style={styles.detailText}>{dummyRide.vehicle_type}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <MapPin size={20} color={Colors.light.primary} />
-              <Text style={styles.detailText}>{dummyRide.pickup_name}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <MapPin size={20} color={Colors.light.error} />
-              <Text style={styles.detailText}>{dummyRide.destination_name}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Clock size={20} color={Colors.light.primary} />
-              <Text style={styles.detailText}>
-                {new Date(dummyRide.departure_time).toLocaleString()}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Users size={20} color={Colors.light.primary} />
-              <Text style={styles.detailText}>
-                {dummyRide.seats_available} seats available
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Participants</Text>
-            <View style={styles.participantsContainer}>
-              {participants.map((participant) => (
-                <View key={participant.id} style={styles.participantItem}>
-                  <TouchableOpacity 
-                    style={styles.participantInfo}
-                    onPress={() => handleUserPress(participant.id)}
-                  >
-                    <Image source={{ uri: participant.image }} style={styles.participantImage} />
-                    <Text style={styles.participantName}>{participant.name}</Text>
-                  </TouchableOpacity>
-                  {!participant.reviewed && participant.id !== currentUser?.id && (
-                    <TouchableOpacity 
-                      style={styles.reviewButton}
-                      onPress={() => handleReviewUser(participant)}
-                    >
-                      <Text style={styles.reviewButtonText}>Review</Text>
-                    </TouchableOpacity>
-                  )}
-                  {participant.reviewed && (
-                    <Text style={styles.reviewedText}>Reviewed</Text>
-                  )}
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.buttonContainer}>
-            {isHost ? (
-              <AnimatedPressable 
-                style={[styles.button, styles.deleteButton]}
-                onPress={handleDeleteRide}
-              >
-                <Text style={[styles.buttonText, styles.deleteButtonText]}>
-                  Delete Ride
-                </Text>
-              </AnimatedPressable>
-            ) : (
-              <>
-                <AnimatedPressable 
-                  style={[styles.button, styles.joinButton]}
-                  onPress={handleJoinRide}
-                >
-                  <Text style={[styles.buttonText, styles.joinButtonText]}>
-                    Join Ride
-                  </Text>
-                </AnimatedPressable>
-                <AnimatedPressable 
-                  style={[styles.button, styles.leaveButton]}
-                  onPress={handleLeaveRide}
-                >
-                  <Text style={[styles.buttonText, styles.leaveButtonText]}>
-                    Leave Ride
-                  </Text>
-                </AnimatedPressable>
-              </>
-            )}
-          </View>
-        </ScrollView>
-      ) : (
-        <View style={styles.chatContainer}>
-          <FlatList
-            data={dummyRide.chat}
-            renderItem={renderChatMessage}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.chatList}
-            inverted
+        <>
+          <RideDetails 
+            ride={dummyRide}
+            currentUser={currentUser}
+            onJoinRide={handleJoinRide}
+            onLeaveRide={handleLeaveRide}
+            onDeleteRide={handleDeleteRide}
+            onUserPress={handleUserPress}
           />
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type a message..."
-              value={message}
-              onChangeText={setMessage}
-              placeholderTextColor={Colors.light.subtext}
-              multiline
-            />
-            <TouchableOpacity 
-              style={styles.sendButton}
-              onPress={handleSendMessage}
-            >
-              <Send size={20} color={Colors.light.card} />
-            </TouchableOpacity>
-          </View>
-        </View>
+          <ParticipantsReviews 
+            participants={participants}
+            currentUser={currentUser}
+            onUserPress={handleUserPress}
+            onReviewUser={handleReviewUser}
+          />
+        </>
+      ) : (
+        <GroupChat 
+          chat={dummyRide.chat}
+          message={message}
+          setMessage={setMessage}
+          onSendMessage={handleSendMessage}
+        />
       )}
 
       <Modal
@@ -400,204 +273,6 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: Colors.light.primary,
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    backgroundColor: Colors.light.card,
-    padding: 16,
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  hostInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  hostImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
-  },
-  hostDetails: {
-    flex: 1,
-  },
-  hostName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.light.text,
-    marginBottom: 4,
-    fontFamily: 'Inter-SemiBold',
-  },
-  hostLabel: {
-    fontSize: 14,
-    color: Colors.light.subtext,
-    fontFamily: 'Inter-Regular',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  detailText: {
-    fontSize: 16,
-    color: Colors.light.text,
-    marginLeft: 12,
-    fontFamily: 'Inter-Regular',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.light.text,
-    marginBottom: 16,
-    fontFamily: 'Inter-SemiBold',
-  },
-  participantsContainer: {
-    gap: 12,
-  },
-  participantItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.background,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  participantInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  participantImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  participantName: {
-    fontSize: 16,
-    color: Colors.light.text,
-    fontFamily: 'Inter-Medium',
-  },
-  reviewButton: {
-    backgroundColor: Colors.light.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  reviewButtonText: {
-    color: Colors.light.card,
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-  },
-  reviewedText: {
-    fontSize: 14,
-    color: Colors.light.success,
-    fontFamily: 'Inter-Medium',
-  },
-  buttonContainer: {
-    padding: 16,
-  },
-  button: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Inter-SemiBold',
-  },
-  joinButton: {
-    backgroundColor: Colors.light.primary,
-  },
-  joinButtonText: {
-    color: Colors.light.card,
-  },
-  leaveButton: {
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.error,
-  },
-  leaveButtonText: {
-    color: Colors.light.error,
-  },
-  deleteButton: {
-    backgroundColor: Colors.light.error,
-  },
-  deleteButtonText: {
-    color: Colors.light.card,
-  },
-  chatContainer: {
-    flex: 1,
-  },
-  chatList: {
-    padding: 16,
-  },
-  messageContainer: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  sentMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: Colors.light.primary,
-  },
-  receivedMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  messageSender: {
-    fontSize: 14,
-    color: Colors.light.subtext,
-    marginBottom: 4,
-    fontFamily: 'Inter-Regular',
-  },
-  messageText: {
-    fontSize: 16,
-    color: Colors.light.text,
-    marginBottom: 4,
-    fontFamily: 'Inter-Regular',
-  },
-  messageTime: {
-    fontSize: 12,
-    color: Colors.light.subtext,
-    alignSelf: 'flex-end',
-    fontFamily: 'Inter-Regular',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: Colors.light.card,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 12,
-    fontSize: 16,
-    color: Colors.light.text,
-    fontFamily: 'Inter-Regular',
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.light.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,

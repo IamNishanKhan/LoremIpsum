@@ -1,54 +1,72 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, router } from 'expo-router';
-import { Mail, Lock, Eye, EyeOff, User, ChevronLeft, Phone, CircleUser as UserCircle2 } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import Colors from '../../constants/Colors';
-import Logo from '../../components/Logo';
-import { useToast } from '../../components/ToastProvider';
-import AnimatedPressable from '../../components/AnimatedPressable';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Link, router } from "expo-router";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  User,
+  ChevronLeft,
+  Phone,
+  CircleUser as UserCircle2,
+} from "lucide-react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import Colors from "../../constants/Colors";
+import Logo from "../../components/Logo";
+import { useToast } from "../../components/ToastProvider";
+import AnimatedPressable from "../../components/AnimatedPressable";
 
-const BASE_URL = 'https://ride.big-matrix.com';
+import { BASE_URL } from "../api_endpoint_url";
 
 export default function SignupScreen() {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [gender, setGender] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [gender, setGender] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState("");
   const { showToast } = useToast();
 
   const validateForm = () => {
-    if (!firstName || !lastName || !email || !phone || !studentId || !gender || !password || !confirmPassword) {
-      showToast('Please fill in all fields', 'error');
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !studentId ||
+      !gender ||
+      !password ||
+      !confirmPassword
+    ) {
+      showToast("Please fill in all fields", "error");
       return false;
     }
 
-    if (!email.endsWith('@northsouth.edu')) {
-      showToast('Please use your NSU email (@northsouth.edu)', 'error');
+    if (!email.endsWith("@northsouth.edu")) {
+      showToast("Please use your NSU email (@northsouth.edu)", "error");
       return false;
     }
 
     if (password !== confirmPassword) {
-      showToast('Passwords do not match', 'error');
+      showToast("Passwords do not match", "error");
       return false;
     }
 
@@ -69,31 +87,32 @@ export default function SignupScreen() {
         phone_number: phone,
         password,
       };
-      console.log('Sending payload:', JSON.stringify(payload)); // Log payload
+      console.log("Sending payload:", JSON.stringify(payload)); // Log payload
 
       const response = await fetch(`${BASE_URL}/api/users/register/`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
 
       const rawResponse = await response.text(); // Get raw response
-      console.log('Raw response:', rawResponse); // Log it
+      console.log("Raw response:", rawResponse); // Log it
 
       const data = JSON.parse(rawResponse); // Parse after logging
 
       if (response.ok) {
-        showToast('OTP sent to your email!', 'success');
+        showToast("OTP sent to your email!", "success");
         setOtpSent(true);
       } else {
-        const errorMessage = data.error || Object.values(data)[0]?.[0] || 'Registration failed';
-        showToast(errorMessage, 'error');
+        const errorMessage =
+          data.error || Object.values(data)[0]?.[0] || "Registration failed";
+        showToast(errorMessage, "error");
       }
     } catch (error) {
-      showToast('Network error. Please try again.', 'error');
-      console.error('Error:', error);
+      showToast("Network error. Please try again.", "error");
+      console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -101,16 +120,16 @@ export default function SignupScreen() {
 
   const verifyOtp = async () => {
     if (!otp) {
-      showToast('Please enter OTP', 'error');
+      showToast("Please enter OTP", "error");
       return;
     }
 
     setIsLoading(true);
     try {
       const response = await fetch(`${BASE_URL}/api/verify-otp/`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email,
@@ -119,19 +138,19 @@ export default function SignupScreen() {
       });
 
       const rawResponse = await response.text(); // Get raw response
-      console.log('Verify OTP response:', rawResponse); // Log it
+      console.log("Verify OTP response:", rawResponse); // Log it
 
       const data = JSON.parse(rawResponse);
 
       if (response.ok) {
-        showToast('Registration successful!', 'success');
-        router.replace('/auth/login');
+        showToast("Registration successful!", "success");
+        router.replace("/auth/login");
       } else {
-        showToast(data.error || 'OTP verification failed', 'error');
+        showToast(data.error || "OTP verification failed", "error");
       }
     } catch (error) {
-      showToast('Network error. Please try again.', 'error');
-      console.error('Error:', error);
+      showToast("Network error. Please try again.", "error");
+      console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -139,16 +158,16 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
             >
@@ -156,29 +175,35 @@ export default function SignupScreen() {
             </TouchableOpacity>
           </View>
 
-          <Animated.View 
+          <Animated.View
             style={styles.logoContainer}
             entering={FadeInDown.delay(100).duration(500)}
           >
             <Logo size="medium" />
           </Animated.View>
 
-          <Animated.View 
+          <Animated.View
             style={styles.headerContainer}
             entering={FadeInDown.delay(200).duration(500)}
           >
             <Text style={styles.headerTitle}>Create Account</Text>
-            <Text style={styles.headerSubtitle}>Join our NSU ride-sharing community</Text>
+            <Text style={styles.headerSubtitle}>
+              Join our NSU ride-sharing community
+            </Text>
           </Animated.View>
 
           {!otpSent ? (
-            <Animated.View 
+            <Animated.View
               style={styles.formContainer}
               entering={FadeInDown.delay(300).duration(500)}
             >
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <User size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <User
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="First Name"
@@ -191,7 +216,11 @@ export default function SignupScreen() {
 
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <User size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <User
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Last Name"
@@ -204,7 +233,11 @@ export default function SignupScreen() {
 
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <Mail size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <Mail
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="NSU Email"
@@ -219,7 +252,11 @@ export default function SignupScreen() {
 
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <UserCircle2 size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <UserCircle2
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Student ID"
@@ -232,7 +269,11 @@ export default function SignupScreen() {
 
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <Phone size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <Phone
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Phone Number"
@@ -247,27 +288,51 @@ export default function SignupScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Gender</Text>
                 <View style={styles.genderContainer}>
-                  <TouchableOpacity 
-                    style={[styles.genderButton, gender === 'Male' && styles.genderButtonActive]}
-                    onPress={() => setGender('Male')}
+                  <TouchableOpacity
+                    style={[
+                      styles.genderButton,
+                      gender === "Male" && styles.genderButtonActive,
+                    ]}
+                    onPress={() => setGender("Male")}
                   >
-                    <Text style={[styles.genderButtonText, gender === 'Male' && styles.genderButtonTextActive]}>
+                    <Text
+                      style={[
+                        styles.genderButtonText,
+                        gender === "Male" && styles.genderButtonTextActive,
+                      ]}
+                    >
                       Male
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.genderButton, gender === 'Female' && styles.genderButtonActive]}
-                    onPress={() => setGender('Female')}
+                  <TouchableOpacity
+                    style={[
+                      styles.genderButton,
+                      gender === "Female" && styles.genderButtonActive,
+                    ]}
+                    onPress={() => setGender("Female")}
                   >
-                    <Text style={[styles.genderButtonText, gender === 'Female' && styles.genderButtonTextActive]}>
+                    <Text
+                      style={[
+                        styles.genderButtonText,
+                        gender === "Female" && styles.genderButtonTextActive,
+                      ]}
+                    >
                       Female
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.genderButton, gender === 'Other' && styles.genderButtonActive]}
-                    onPress={() => setGender('Other')}
+                  <TouchableOpacity
+                    style={[
+                      styles.genderButton,
+                      gender === "Other" && styles.genderButtonActive,
+                    ]}
+                    onPress={() => setGender("Other")}
                   >
-                    <Text style={[styles.genderButtonText, gender === 'Other' && styles.genderButtonTextActive]}>
+                    <Text
+                      style={[
+                        styles.genderButtonText,
+                        gender === "Other" && styles.genderButtonTextActive,
+                      ]}
+                    >
                       Other
                     </Text>
                   </TouchableOpacity>
@@ -276,7 +341,11 @@ export default function SignupScreen() {
 
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <Lock size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <Lock
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Password"
@@ -285,7 +354,7 @@ export default function SignupScreen() {
                     secureTextEntry={!showPassword}
                     placeholderTextColor={Colors.light.subtext}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.eyeIcon}
                     onPress={() => setShowPassword(!showPassword)}
                   >
@@ -300,7 +369,11 @@ export default function SignupScreen() {
 
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <Lock size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <Lock
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Confirm Password"
@@ -309,7 +382,7 @@ export default function SignupScreen() {
                     secureTextEntry={!showConfirmPassword}
                     placeholderTextColor={Colors.light.subtext}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.eyeIcon}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
@@ -324,24 +397,27 @@ export default function SignupScreen() {
 
               <View style={styles.termsContainer}>
                 <Text style={styles.termsText}>
-                  By signing up, you agree to our{' '}
-                  <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
+                  By signing up, you agree to our{" "}
+                  <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
                   <Text style={styles.termsLink}>Privacy Policy</Text>
                 </Text>
               </View>
 
-              <AnimatedPressable 
-                style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
+              <AnimatedPressable
+                style={[
+                  styles.signupButton,
+                  isLoading && styles.signupButtonDisabled,
+                ]}
                 onPress={handleSignup}
                 disabled={isLoading}
               >
                 <Text style={styles.signupButtonText}>
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
+                  {isLoading ? "Creating Account..." : "Create Account"}
                 </Text>
               </AnimatedPressable>
             </Animated.View>
           ) : (
-            <Animated.View 
+            <Animated.View
               style={styles.formContainer}
               entering={FadeInDown.delay(300).duration(500)}
             >
@@ -352,7 +428,11 @@ export default function SignupScreen() {
 
               <View style={styles.inputGroup}>
                 <View style={styles.inputContainer}>
-                  <Lock size={20} color={Colors.light.primary} style={styles.inputIcon} />
+                  <Lock
+                    size={20}
+                    color={Colors.light.primary}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Enter OTP"
@@ -365,19 +445,22 @@ export default function SignupScreen() {
                 </View>
               </View>
 
-              <AnimatedPressable 
-                style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
+              <AnimatedPressable
+                style={[
+                  styles.signupButton,
+                  isLoading && styles.signupButtonDisabled,
+                ]}
                 onPress={verifyOtp}
                 disabled={isLoading}
               >
                 <Text style={styles.signupButtonText}>
-                  {isLoading ? 'Verifying...' : 'Verify OTP'}
+                  {isLoading ? "Verifying..." : "Verify OTP"}
                 </Text>
               </AnimatedPressable>
             </Animated.View>
           )}
 
-          <Animated.View 
+          <Animated.View
             style={styles.loginContainer}
             entering={FadeInDown.delay(400).duration(500)}
           >
@@ -405,15 +488,15 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 10,
   },
   backButton: {
     padding: 8,
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
     marginBottom: 20,
   },
@@ -422,17 +505,17 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.light.text,
     marginBottom: 8,
-    fontFamily: 'Inter-Bold',
-    textAlign: 'center',
+    fontFamily: "Inter-Bold",
+    textAlign: "center",
   },
   headerSubtitle: {
     fontSize: 16,
     color: Colors.light.subtext,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
+    fontFamily: "Inter-Regular",
+    textAlign: "center",
   },
   formContainer: {
     marginBottom: 20,
@@ -444,11 +527,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light.text,
     marginBottom: 8,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.light.card,
     borderRadius: 12,
     paddingHorizontal: 15,
@@ -463,14 +546,14 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     fontSize: 16,
     color: Colors.light.text,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   eyeIcon: {
     padding: 8,
   },
   genderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   genderButton: {
     flex: 1,
@@ -480,7 +563,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
     marginHorizontal: 4,
-    alignItems: 'center',
+    alignItems: "center",
   },
   genderButtonActive: {
     backgroundColor: Colors.light.primary,
@@ -489,7 +572,7 @@ const styles = StyleSheet.create({
   genderButtonText: {
     fontSize: 16,
     color: Colors.light.text,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
   genderButtonTextActive: {
     color: Colors.light.card,
@@ -500,59 +583,59 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 14,
     color: Colors.light.subtext,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
+    fontFamily: "Inter-Regular",
+    textAlign: "center",
     lineHeight: 20,
   },
   termsLink: {
     color: Colors.light.primary,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
   signupButton: {
     backgroundColor: Colors.light.primary,
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   signupButtonDisabled: {
     backgroundColor: Colors.light.border,
   },
   signupButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: "600",
+    fontFamily: "Inter-SemiBold",
   },
   loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 10,
   },
   loginText: {
     fontSize: 16,
     color: Colors.light.subtext,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   loginLink: {
     fontSize: 16,
     color: Colors.light.primary,
-    fontWeight: '600',
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: "600",
+    fontFamily: "Inter-SemiBold",
   },
   otpTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.light.text,
     marginBottom: 8,
-    fontFamily: 'Inter-Bold',
-    textAlign: 'center',
+    fontFamily: "Inter-Bold",
+    textAlign: "center",
   },
   otpSubtitle: {
     fontSize: 16,
     color: Colors.light.subtext,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
+    fontFamily: "Inter-Regular",
+    textAlign: "center",
     marginBottom: 24,
   },
 });

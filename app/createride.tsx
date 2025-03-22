@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -15,11 +15,16 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Colors from '../constants/Colors';
 import { useToast } from '../components/ToastProvider';
 import AnimatedPressable from '../components/AnimatedPressable';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from './api_endpoint_url';
 
 const vehicleTypes = [
-  { id: 'car', label: 'Private Car', icon: Car, maxSeats: 3 },
-  { id: 'bike', label: 'Private Bike', icon: Bike, maxSeats: 1 },
-  { id: 'cng', label: 'CNG/Uber/Taxi', icon: Truck, maxSeats: 3 },
+  { id: 'Private Car', label: 'Private Car', icon: Car, maxSeats: 3 },
+  { id: 'Private Bike', label: 'Private Bike', icon: Bike, maxSeats: 1 },
+  { id: 'CNG', label: 'CNG', icon: Truck, maxSeats: 2 },
+  { id: 'Uber', label: 'Uber', icon: Truck, maxSeats: 3 },
+  { id: 'Taxi', label: 'Taxi', icon: Truck, maxSeats: 3 },
+  { id: 'Rickshaw', label: 'Rickshaw', icon: Truck, maxSeats: 2 },
 ];
 
 export default function CreateRideScreen() {
@@ -30,17 +35,83 @@ export default function CreateRideScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [totalFare, setTotalFare] = useState('');
   const [isFemaleOnly, setIsFemaleOnly] = useState(false);
+  const [userGender, setUserGender] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { showToast } = useToast();
 
-  const handleCreateRide = () => {
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      const response = await fetch(`${BASE_URL}/api/users/profile/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setUserGender(data.gender?.toLowerCase());
+      } else {
+        showToast('Failed to load user profile', 'error');
+      }
+    } catch (error) {
+      showToast('Network error while loading profile', 'error');
+      console.error('Error fetching profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateRide = async () => {
     if (!vehicleType || !pickup || !destination || !totalFare) {
       showToast('Please fill in all required fields', 'error');
       return;
     }
 
-    showToast('Ride created successfully!', 'success');
-    router.back();
+    setIsLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      const payload = {
+        vehicle_type: vehicleType,
+        pickup_name: pickup,
+        destination_name: destination,
+        departure_time: departureDate.toISOString(),
+        total_fare: parseFloat(totalFare),
+        is_female_only: isFemaleOnly,
+      };
+
+      const response = await fetch(`${BASE_URL}/api/rides/create/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast('Ride created successfully!', 'success');
+        router.back();
+      } else {
+        showToast(data.message || 'Failed to create ride', 'error');
+      }
+    } catch (error) {
+      showToast('Network error while creating ride', 'error');
+      console.error('Error creating ride:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const isFemaleOnlyDisabled = userGender && userGender !== 'female';
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -66,6 +137,9 @@ export default function CreateRideScreen() {
                   vehicleType === type.id && styles.vehicleTypeTextActive
                 ]}>
                   {type.label}
+                </Text>
+                <Text style={styles.seatsText}>
+                  {type.maxSeats} seats
                 </Text>
               </AnimatedPressable>
             ))}
@@ -115,6 +189,7 @@ export default function CreateRideScreen() {
                 value={departureDate}
                 mode="datetime"
                 display="default"
+                minimumDate={new Date()}
                 onChange={(event, selectedDate) => {
                   setShowDatePicker(false);
                   if (selectedDate) {
@@ -140,21 +215,46 @@ export default function CreateRideScreen() {
             </View>
           </View>
 
-          <View style={styles.toggleContainer}>
-            <Text style={styles.label}>Female Only Ride</Text>
+          <View style={[
+            styles.toggleContainer,
+            isFemaleOnlyDisabled && styles.toggleContainerDisabled
+          ]}>
+            <Text style={[
+              styles.label,
+              isFemaleOnlyDisabled && styles.labelDisabled
+            ]}>
+              Female Only Ride
+            </Text>
             <TouchableOpacity 
-              style={[styles.toggle, isFemaleOnly && styles.toggleActive]}
-              onPress={() => setIsFemaleOnly(!isFemaleOnly)}
+              style={[
+                styles.toggle,
+                isFemaleOnly && styles.toggleActive,
+                isFemaleOnlyDisabled && styles.toggleDisabled
+              ]}
+              onPress={() => !isFemaleOnlyDisabled && setIsFemaleOnly(!isFemaleOnly)}
+              disabled={isFemaleOnlyDisabled}
             >
-              <View style={[styles.toggleHandle, isFemaleOnly && styles.toggleHandleActive]} />
+              <View style={[
+                styles.toggleHandle,
+                isFemaleOnly && styles.toggleHandleActive,
+                isFemaleOnlyDisabled && styles.toggleHandleDisabled
+              ]} />
             </TouchableOpacity>
           </View>
+          {isFemaleOnlyDisabled && (
+            <Text style={styles.disabledNote}>
+              Only female users can create female-only rides
+            </Text>
+          )}
 
           <AnimatedPressable 
-            style={styles.createButton}
+            style={[styles.createButton, isLoading && styles.createButtonDisabled]}
             onPress={handleCreateRide}
+            disabled={isLoading}
           >
-            <Text style={styles.createButtonText}>Create Ride</Text>
+            <Text style={styles.createButtonText}>
+              {isLoading ? 'Creating...' : 'Create Ride'}
+            </Text>
           </AnimatedPressable>
         </View>
       </ScrollView>
@@ -182,17 +282,18 @@ const styles = StyleSheet.create({
   },
   vehicleTypesContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 24,
   },
   vehicleTypeButton: {
-    flex: 1,
+    width: '48%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     backgroundColor: Colors.light.card,
     borderRadius: 12,
-    marginHorizontal: 4,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
@@ -210,6 +311,12 @@ const styles = StyleSheet.create({
   vehicleTypeTextActive: {
     color: Colors.light.primary,
   },
+  seatsText: {
+    fontSize: 12,
+    color: Colors.light.subtext,
+    fontFamily: 'Inter-Regular',
+    marginTop: 4,
+  },
   inputGroup: {
     marginBottom: 16,
   },
@@ -218,6 +325,9 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 8,
     fontFamily: 'Inter-Medium',
+  },
+  labelDisabled: {
+    color: Colors.light.subtext,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -251,6 +361,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  toggleContainerDisabled: {
+    opacity: 0.5,
+  },
   toggle: {
     width: 50,
     height: 30,
@@ -260,6 +373,9 @@ const styles = StyleSheet.create({
   },
   toggleActive: {
     backgroundColor: Colors.light.primary,
+  },
+  toggleDisabled: {
+    backgroundColor: Colors.light.border,
   },
   toggleHandle: {
     width: 26,
@@ -271,11 +387,24 @@ const styles = StyleSheet.create({
   toggleHandleActive: {
     transform: [{ translateX: 20 }],
   },
+  toggleHandleDisabled: {
+    backgroundColor: Colors.light.card,
+  },
+  disabledNote: {
+    fontSize: 12,
+    color: Colors.light.subtext,
+    fontFamily: 'Inter-Regular',
+    marginTop: -20,
+    marginBottom: 24,
+  },
   createButton: {
     backgroundColor: Colors.light.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  createButtonDisabled: {
+    backgroundColor: Colors.light.border,
   },
   createButtonText: {
     color: Colors.light.card,
