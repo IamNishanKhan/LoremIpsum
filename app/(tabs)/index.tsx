@@ -1,235 +1,107 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Platform, Dimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, Plus, MapPin, Flag, Clock, ChevronRight, Bell } from "lucide-react-native";
-import { Link, router } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import Colors from "../../constants/Colors";
-import AnimatedPressable from "../../components/AnimatedPressable";
-import * as Location from "expo-location";
-import MapView, { Marker } from "react-native-maps";
-import axios from "axios";
-
-
-const { width } = Dimensions.get("window");
+import React from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Image,
+  ScrollView
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { Search, Plus, MapPin } from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import Colors from '../../constants/Colors';
+import AnimatedPressable from '../../components/AnimatedPressable';
 
 export default function HomeScreen() {
-  const [searchText, setSearchText] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userImage, setUserImage] = useState("https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541");
-  const [userLocation, setUserLocation] = useState(null);
-  const [nearbyRides, setNearbyRides] = useState([]);
+  const handleCreateRide = () => {
+    router.push('/createride');
+  };
 
-  // Load user data from AsyncStorage
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const userData = await AsyncStorage.getItem("user_data");
-        if (userData) {
-          const user = JSON.parse(userData);
-          setUserName(user.first_name);
-          if (user.profile_photo) {
-            setUserImage(user.profile_photo);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error);
-      }
-    };
-    loadUserData();
-  }, []);
-
-  // Get user's current location
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.log("Permission to access location was denied");
-        return;
-      }
-      let location = await Location.getCurrentPositionAsync({});
-      setUserLocation(location.coords);
-    })();
-  }, []);
-
-  // Fetch nearby rides when location is available
-  useEffect(() => {
-    if (userLocation) {
-      fetchNearbyRides(userLocation.latitude, userLocation.longitude);
-    }
-  }, [userLocation]);
-
-  // Function to fetch nearby rides
-  async function fetchNearbyRides(lat, lon) {
-    try {
-      // Note: Since the provided example is for geocoding, I'm assuming a hypothetical
-      // rides endpoint that follows a similar pattern and returns ride data with coordinates
-      const config = {
-        method: "get",
-        url: `https://maps-api.pathao.io/v1/rides/nearby?lat=${lat}&lon=${lon}`,
-        headers: {
-          Authorization: "SESYVMVADVCPSDXCCL6AEWKOEJWINEJ24NKNCII62QUFWVEX36RHAJJQ4QH7NSRTGOLYF6HRAIDC3GFWJ3NG7HDQE523IR4DSWYIBFLH5OTLLDQ4Y2NLZHSRRVOTNCL3H6LHLQDRSMRLI3STKWZ3BLRPCZSC5K553LTSOPBCO5K3UODYRC2Q3YPQZAXTVQLYSJL5DD3GC7HZ3QMGEPKDDV3N6W3D5O42VSTY6KR6SU62SECEM435IGU3FVYBYTBCDHKOQHWH",
-        },
-      };
-      const response = await axios.request(config);
-      // Assuming response.data.rides contains array of rides with id, pickup_latitude, pickup_longitude, title, description
-      setNearbyRides(response.data.rides || []);
-    } catch (error) {
-      console.error("Error fetching nearby rides:", error);
-    }
-  }
-
-  const recentActivity = [
-    {
-      id: "1",
-      title: "Downtown",
-      subtitle: "Autumn Park",
-      icon: "🏙️",
-      time: "2 days ago",
-    },
-  ];
+  const handleFindRide = () => {
+    router.push('/rides');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.greeting}>
-          <Text style={styles.greetingText}>Hello, {userName}!</Text>
-          <Text style={styles.readyText}>Ready to ride?</Text>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Hello, Rider!</Text>
+          <Text style={styles.subtitle}>Where would you like to go today?</Text>
         </View>
 
-        <TouchableOpacity style={styles.profileButton} onPress={() => router.push("/profile")}>
-          <Image source={{ uri: userImage }} style={styles.profileImage} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <Animated.View style={styles.searchContainer} entering={FadeInDown.delay(300).duration(500)}>
-          <View style={styles.searchBar}>
-            <Search size={20} color={Colors.light.subtext} style={styles.searchIcon} />
-            <TextInput style={styles.searchInput} placeholder="Search rides by destination name..." value={searchText} onChangeText={setSearchText} placeholderTextColor={Colors.light.subtext} />
-          </View>
+        <Animated.View 
+          style={styles.heroContainer}
+          entering={FadeInDown.delay(200).duration(500)}
+        >
+          <Image
+            source={{ uri: 'https://img.freepik.com/free-vector/car-sharing-concept-illustration_114360-2193.jpg?w=740&t=st=1715000000~exp=1715000600~hmac=a7d3c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8c8' }}
+            style={styles.heroImage}
+          />
         </Animated.View>
 
-        <Animated.View style={styles.quickActionsContainer} entering={FadeInDown.delay(400).duration(500)}>
-          <AnimatedPressable style={styles.quickActionButton}>
-            <View style={styles.quickActionIconContainer}>
+        <Animated.View 
+          style={styles.actionsContainer}
+          entering={FadeInDown.delay(300).duration(500)}
+        >
+          <AnimatedPressable 
+            style={styles.actionButton}
+            onPress={handleFindRide}
+          >
+            <View style={styles.actionIcon}>
               <Search size={24} color={Colors.light.primary} />
             </View>
-            <Text style={styles.quickActionText}>Find a Ride</Text>
+            <Text style={styles.actionTitle}>Find Mutual Ride</Text>
+            <Text style={styles.actionDescription}>
+              Search for available rides and join others going your way
+            </Text>
           </AnimatedPressable>
 
-          <AnimatedPressable style={styles.quickActionButton}>
-            <View style={styles.quickActionIconContainer}>
+          <AnimatedPressable 
+            style={styles.actionButton}
+            onPress={handleCreateRide}
+          >
+            <View style={styles.actionIcon}>
               <Plus size={24} color={Colors.light.primary} />
             </View>
-            <Text style={styles.quickActionText}>Create a Ride</Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable style={styles.quickActionButton}>
-            <View style={styles.quickActionIconContainer}>
-              <MapPin size={24} color={Colors.light.primary} />
-            </View>
-            <Text style={styles.quickActionText}>Saved</Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable style={styles.quickActionButton}>
-            <View style={styles.quickActionIconContainer}>
-              <Flag size={24} color={Colors.light.primary} />
-            </View>
-            <Text style={styles.quickActionText}>Report Issue</Text>
+            <Text style={styles.actionTitle}>Create Ride</Text>
+            <Text style={styles.actionDescription}>
+              Offer a ride and share your journey with others
+            </Text>
           </AnimatedPressable>
         </Animated.View>
 
-        <Animated.View style={styles.sectionContainer} entering={FadeInDown.delay(500).duration(500)}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionAction}>Show All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {recentActivity.map((activity) => (
-            <AnimatedPressable key={activity.id} style={styles.activityItem}>
-              <View style={styles.activityIconContainer}>
-                <Text style={styles.activityIcon}>{activity.icon}</Text>
-              </View>
-              <View style={styles.activityInfo}>
-                <Text style={styles.activityTitle}>{activity.title}</Text>
-                <Text style={styles.activitySubtitle}>{activity.subtitle}</Text>
-              </View>
-              <View style={styles.activityTimeContainer}>
-                <Clock size={14} color={Colors.light.subtext} />
-                <Text style={styles.activityTime}>{activity.time}</Text>
+        <Animated.View 
+          style={styles.popularRoutesContainer}
+          entering={FadeInDown.delay(400).duration(500)}
+        >
+          <Text style={styles.sectionTitle}>Popular Routes</Text>
+          <View style={styles.routesList}>
+            <AnimatedPressable style={styles.routeCard}>
+              <MapPin size={20} color={Colors.light.primary} />
+              <View style={styles.routeInfo}>
+                <Text style={styles.routeName}>NSU to Banani</Text>
+                <Text style={styles.routeStats}>15 rides today</Text>
               </View>
             </AnimatedPressable>
-          ))}
-        </Animated.View>
 
-        {/* Updated Nearby Rides Section */}
-        <Animated.View style={styles.sectionContainer} entering={FadeInDown.delay(600).duration(500)}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Nearby Rides</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionAction}>Map View</Text>
-            </TouchableOpacity>
+            <AnimatedPressable style={styles.routeCard}>
+              <MapPin size={20} color={Colors.light.primary} />
+              <View style={styles.routeInfo}>
+                <Text style={styles.routeName}>NSU to Gulshan</Text>
+                <Text style={styles.routeStats}>12 rides today</Text>
+              </View>
+            </AnimatedPressable>
+
+            <AnimatedPressable style={styles.routeCard}>
+              <MapPin size={20} color={Colors.light.primary} />
+              <View style={styles.routeInfo}>
+                <Text style={styles.routeName}>NSU to Uttara</Text>
+                <Text style={styles.routeStats}>8 rides today</Text>
+              </View>
+            </AnimatedPressable>
           </View>
-
-          {Platform.OS !== 'web' && userLocation ? (
-            <MapView
-              style={styles.map}
-              initialRegion={{
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              }}
-            >
-              <Marker
-                coordinate={{
-                  latitude: userLocation.latitude,
-                  longitude: userLocation.longitude,
-                }}
-                title="Your Location"
-                pinColor="blue"
-              />
-              {nearbyRides.map((ride) => (
-                <Marker
-                  key={ride.id}
-                  coordinate={{
-                    latitude: ride.pickup_latitude,
-                    longitude: ride.pickup_longitude,
-                  }}
-                  title={ride.title}
-                  description={ride.description}
-                />
-              ))}
-            </MapView>
-          ) : (
-            <View style={[styles.map, styles.mapPlaceholder]}>
-              <Text style={styles.mapPlaceholderText}>Map not available in web view</Text>
-            </View>
-          )}
         </Animated.View>
-
-        <Animated.View style={styles.sectionContainer} entering={FadeInDown.delay(700).duration(500)}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Notifications</Text>
-          </View>
-
-          <AnimatedPressable style={styles.notificationItem}>
-            <View style={styles.notificationIconContainer}>
-              <Bell size={20} color="#FFFFFF" />
-            </View>
-            <View style={styles.notificationContent}>
-              <Text style={styles.notificationTitle}>New ride alerts found!</Text>
-              <Text style={styles.notificationSubtitle}>Compare 3 routes to Downtown</Text>
-            </View>
-            <ChevronRight size={20} color={Colors.light.subtext} />
-          </AnimatedPressable>
-        </Animated.View>
-
-        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -240,211 +112,101 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.light.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  greeting: {
-    flex: 1,
-  },
-  greetingText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: Colors.light.text,
-    fontFamily: "Inter-SemiBold",
-  },
-  readyText: {
-    fontSize: 14,
-    color: Colors.light.subtext,
-    fontFamily: "Inter-Regular",
-    marginTop: 2,
-  },
-  profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-  },
-  profileImage: {
-    width: "100%",
-    height: "100%",
-  },
   scrollView: {
     flex: 1,
   },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  header: {
+    padding: 20,
   },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.light.card,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+  greeting: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.light.text,
+    marginBottom: 8,
+    fontFamily: 'Inter-Bold',
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
+  subtitle: {
     fontSize: 16,
-    color: Colors.light.text,
-    fontFamily: "Inter-Regular",
+    color: Colors.light.subtext,
+    fontFamily: 'Inter-Regular',
   },
-  quickActionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  heroContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
-  quickActionButton: {
-    width: (width - 40) / 2,
+  heroImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
     backgroundColor: Colors.light.card,
-    borderRadius: 8,
-    padding: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
+  },
+  actionsContainer: {
+    padding: 20,
+  },
+  actionButton: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.light.border,
-    height: 90,
   },
-  quickActionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F0EFFE",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  quickActionText: {
-    fontSize: 14,
-    color: Colors.light.text,
-    fontFamily: "Inter-Medium",
-    textAlign: "center",
-  },
-  sectionContainer: {
-    paddingHorizontal: 16,
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.light.primary + '10',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+  actionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.light.text,
+    marginBottom: 8,
+    fontFamily: 'Inter-SemiBold',
+  },
+  actionDescription: {
+    fontSize: 14,
+    color: Colors.light.subtext,
+    fontFamily: 'Inter-Regular',
+  },
+  popularRoutesContainer: {
+    padding: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: '600',
     color: Colors.light.text,
-    fontFamily: "Inter-SemiBold",
+    marginBottom: 16,
+    fontFamily: 'Inter-SemiBold',
   },
-  sectionAction: {
-    fontSize: 14,
-    color: Colors.light.primary,
-    fontFamily: "Inter-Medium",
+  routesList: {
+    gap: 12,
   },
-  activityItem: {
-    flexDirection: "row",
-    alignItems: "center",
+  routeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.light.card,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
-  activityIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F0EFFE",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
+  routeInfo: {
+    marginLeft: 12,
   },
-  activityIcon: {
-    fontSize: 18,
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityTitle: {
+  routeName: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: '500',
     color: Colors.light.text,
-    fontFamily: "Inter-Medium",
+    marginBottom: 4,
+    fontFamily: 'Inter-Medium',
   },
-  activitySubtitle: {
+  routeStats: {
     fontSize: 14,
     color: Colors.light.subtext,
-    fontFamily: "Inter-Regular",
-    marginTop: 2,
-  },
-  activityTimeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  activityTime: {
-    fontSize: 12,
-    color: Colors.light.subtext,
-    fontFamily: "Inter-Regular",
-    marginLeft: 4,
-  },
-  map: {
-    height: 180,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  notificationItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.light.card,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  notificationIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.light.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: Colors.light.text,
-    fontFamily: "Inter-Medium",
-  },
-  notificationSubtitle: {
-    fontSize: 14,
-    color: Colors.light.subtext,
-    fontFamily: "Inter-Regular",
-    marginTop: 2,
-  },
-  bottomPadding: {
-    height: 20,
+    fontFamily: 'Inter-Regular',
   },
 });
