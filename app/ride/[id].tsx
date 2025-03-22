@@ -117,6 +117,10 @@ export default function RideDetailsScreen() {
     setShowReviewModal(true);
   };
 
+  const handleUserPress = (userId) => {
+    router.push(`/user/${userId}`);
+  };
+
   const submitReview = () => {
     if (rating === 0) {
       showToast('Please select a rating', 'error');
@@ -192,13 +196,16 @@ export default function RideDetailsScreen() {
       {activeTab === 'details' ? (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.section}>
-            <View style={styles.hostInfo}>
+            <TouchableOpacity 
+              style={styles.hostInfo}
+              onPress={() => handleUserPress(dummyRide.host.id)}
+            >
               <Image source={{ uri: dummyRide.host.image }} style={styles.hostImage} />
               <View style={styles.hostDetails}>
                 <Text style={styles.hostName}>{dummyRide.host.name}</Text>
                 <Text style={styles.hostLabel}>Host</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
@@ -233,8 +240,13 @@ export default function RideDetailsScreen() {
             <View style={styles.participantsContainer}>
               {participants.map((participant) => (
                 <View key={participant.id} style={styles.participantItem}>
-                  <Image source={{ uri: participant.image }} style={styles.participantImage} />
-                  <Text style={styles.participantName}>{participant.name}</Text>
+                  <TouchableOpacity 
+                    style={styles.participantInfo}
+                    onPress={() => handleUserPress(participant.id)}
+                  >
+                    <Image source={{ uri: participant.image }} style={styles.participantImage} />
+                    <Text style={styles.participantName}>{participant.name}</Text>
+                  </TouchableOpacity>
                   {!participant.reviewed && participant.id !== currentUser?.id && (
                     <TouchableOpacity 
                       style={styles.reviewButton}
@@ -454,6 +466,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
+  participantInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   participantImage: {
     width: 40,
     height: 40,
@@ -461,7 +478,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   participantName: {
-    flex: 1,
     fontSize: 16,
     color: Colors.light.text,
     fontFamily: 'Inter-Medium',

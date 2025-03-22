@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   Image,
   ScrollView,
-  FlatList
+  FlatList,
+  TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -27,6 +28,7 @@ const availableRides = [
     seats_available: 2,
     is_female_only: false,
     host: {
+      id: '1',
       name: 'Ayesha',
       gender: 'female',
       image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
@@ -42,6 +44,7 @@ const availableRides = [
     seats_available: 3,
     is_female_only: true,
     host: {
+      id: '2',
       name: 'Sarah',
       gender: 'female',
       image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
@@ -57,6 +60,7 @@ const availableRides = [
     seats_available: 3,
     is_female_only: false,
     host: {
+      id: '3',
       name: 'Karim',
       gender: 'male',
       image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
@@ -91,6 +95,10 @@ export default function HomeScreen() {
     router.push('/rides');
   };
 
+  const handleUserPress = (userId) => {
+    router.push(`/user/${userId}`);
+  };
+
   const renderRideCard = ({ item }) => (
     <Animated.View entering={FadeInDown.delay(100).duration(400)}>
       <AnimatedPressable 
@@ -98,7 +106,10 @@ export default function HomeScreen() {
         onPress={() => router.push(`/ride/${item.id}`)}
       >
         <View style={styles.rideHeader}>
-          <View style={styles.hostInfo}>
+          <TouchableOpacity 
+            style={styles.hostInfo}
+            onPress={() => handleUserPress(item.host.id)}
+          >
             <Image source={{ uri: item.host.image }} style={styles.hostImage} />
             <View style={styles.hostDetails}>
               <Text style={styles.hostName}>{item.host.name}</Text>
@@ -108,7 +119,7 @@ export default function HomeScreen() {
                 </View>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
           <Text style={styles.fareText}>৳{item.total_fare}</Text>
         </View>
 
