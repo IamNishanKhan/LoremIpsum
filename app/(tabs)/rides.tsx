@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Search, Filter, Car, Bike, Truck } from 'lucide-react-native';
+import { Search, Filter, Car, Bike, Truck, Plus } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Colors from '../../constants/Colors';
 import { useToast } from '../../components/ToastProvider';
@@ -72,6 +72,10 @@ export default function RidesScreen() {
     setJoinCode('');
   };
 
+  const handleCreateRide = () => {
+    router.push('/createride');
+  };
+
   const handleRidePress = (rideId: string) => {
     router.push(`/ride/${rideId}`);
   };
@@ -126,6 +130,12 @@ export default function RidesScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Available Rides</Text>
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={handleCreateRide}
+        >
+          <Plus size={24} color={Colors.light.text} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>
@@ -216,6 +226,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,
@@ -226,6 +239,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.text,
     fontFamily: 'Inter-Bold',
+  },
+  createButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.light.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
   searchContainer: {
     padding: 16,
