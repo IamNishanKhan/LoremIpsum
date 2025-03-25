@@ -1,152 +1,183 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
   ScrollView,
   FlatList,
-  Image
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Search, Filter, Car, Bike, Truck, Plus } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import Colors from '../../constants/Colors';
-import { useToast } from '../../components/ToastProvider';
-import AnimatedPressable from '../../components/AnimatedPressable';
-
-const dummyRides = [
-  {
-    id: '1',
-    vehicle_type: 'Private Car',
-    pickup_name: 'NSU Gate',
-    destination_name: 'Banani',
-    departure_time: '2025-03-22T15:00:00Z',
-    total_fare: 150,
-    seats_available: 2,
-    is_female_only: false,
-    host: {
-      id: '1',
-      name: 'Ayesha',
-      gender: 'female',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
-    }
-  },
-  {
-    id: '2',
-    vehicle_type: 'CNG',
-    pickup_name: 'Bashundhara',
-    destination_name: 'Gulshan',
-    departure_time: '2025-03-22T16:30:00Z',
-    total_fare: 200,
-    seats_available: 3,
-    is_female_only: true,
-    host: {
-      id: '2',
-      name: 'Sarah',
-      gender: 'female',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
-    }
-  }
-];
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { Search, Filter, Car, Bike, Truck, Plus } from "lucide-react-native";
+import Animated from "react-native-reanimated";
+import Colors from "../../constants/Colors";
+import { useToast } from "../../components/ToastProvider";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BASE_URL } from "../api_endpoint_url";
+import RideCard from "../../components/Rides/RideCard";
 
 const vehicleTypes = [
-  { id: 'all', label: 'All', icon: Car },
-  { id: 'car', label: 'Car', icon: Car },
-  { id: 'bike', label: 'Bike', icon: Bike },
-  { id: 'cng', label: 'CNG', icon: Truck }
+  { id: "all", label: "All", icon: Car },
+  { id: "Private Car", label: "Car", icon: Car },
+  { id: "Private Bike", label: "Bike", icon: Bike },
+  { id: "CNG", label: "CNG", icon: Truck },
 ];
 
 export default function RidesScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVehicleType, setSelectedVehicleType] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedVehicleType, setSelectedVehicleType] = useState("all");
   const [showFemaleOnly, setShowFemaleOnly] = useState(false);
-  const [joinCode, setJoinCode] = useState('');
+  const [joinCode, setJoinCode] = useState("");
+  const [rides, setRides] = useState([]);
+  const [filteredRides, setFilteredRides] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userGender, setUserGender] = useState(null);
   const { showToast } = useToast();
 
-  const handleJoinWithCode = () => {
+  useEffect(() => {
+    fetchUserProfile();
+    fetchRides();
+  }, []);
+
+  // Ensure filterRides runs when these dependencies change
+  useEffect(() => {
+    filterRides();
+  }, [searchQuery, selectedVehicleType, showFemaleOnly, rides]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      const response = await fetch(`${BASE_URL}/api/users/profile/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setUserGender(data.gender?.toLowerCase());
+      } else {
+        showToast("Failed to load user profile", "error");
+      }
+    } catch (error) {
+      showToast("Network error while loading profile", "error");
+      console.error("Error fetching profile:", error);
+    }
+  };
+
+  const fetchRides = async () => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem("access_token");
+      const response = await fetch(`${BASE_URL}/api/rides/list/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setRides(data);
+        setFilteredRides(data); // Initially set filteredRides to all rides
+      } else {
+        showToast("Failed to load rides", "error");
+      }
+    } catch (error) {
+      showToast("Network error while fetching rides", "error");
+      console.error("Error fetching rides:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filterRides = () => {
+    let filtered = [...rides];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((ride) =>
+        [
+          ride.pickup_name,
+          ride.destination_name,
+          ride.host.first_name,
+          ride.host.last_name,
+        ].some((field) =>
+          field?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+
+    // Vehicle type filter
+    if (selectedVehicleType !== "all") {
+      filtered = filtered.filter(
+        (ride) =>
+          ride.vehicle_type.toLowerCase() === selectedVehicleType.toLowerCase()
+      );
+    }
+
+    // Female only filter
+    if (showFemaleOnly) {
+      filtered = filtered.filter((ride) => ride.is_female_only === true);
+    }
+
+    setFilteredRides(filtered);
+  };
+
+  const handleJoinWithCode = async () => {
     if (!joinCode.trim()) {
-      showToast('Please enter a join code', 'error');
+      showToast("Please enter a join code", "error");
       return;
     }
-    showToast('Joining ride...', 'info');
-    setJoinCode('');
+
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      const response = await fetch(`${BASE_URL}/api/rides/join-by-code/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ride_code: joinCode }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast("Successfully joined ride", "success");
+        router.push(`/ride/${data.ride.id}`);
+      } else {
+        showToast(data.message || "Failed to join ride", "error");
+      }
+    } catch (error) {
+      showToast("Network error while joining ride", "error");
+      console.error("Error joining ride:", error);
+    }
+    setJoinCode("");
   };
 
   const handleCreateRide = () => {
-    router.push('/createride');
+    router.push("/createride");
   };
 
-  const handleRidePress = (rideId: string) => {
-    router.push(`/ride/${rideId}`);
-  };
-
-  const handleUserPress = (userId: string) => {
+  const handleUserPress = (userId) => {
     router.push(`/user/${userId}`);
   };
 
-  const renderRideCard = ({ item }) => (
-    <Animated.View entering={FadeInDown.delay(100).duration(400)}>
-      <AnimatedPressable 
-        style={styles.rideCard}
-        onPress={() => handleRidePress(item.id)}
-      >
-        <View style={styles.rideHeader}>
-          <View style={styles.rideInfo}>
-            <Text style={styles.vehicleType}>{item.vehicle_type}</Text>
-            {item.is_female_only && (
-              <View style={styles.femaleOnlyBadge}>
-                <Text style={styles.femaleOnlyText}>Female Only</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.fareText}>৳{item.total_fare}</Text>
-        </View>
-
-        <View style={styles.routeContainer}>
-          <View style={styles.routePoint}>
-            <View style={styles.routeDot} />
-            <Text style={styles.locationText}>{item.pickup_name}</Text>
-          </View>
-          <View style={styles.routeLine} />
-          <View style={styles.routePoint}>
-            <View style={[styles.routeDot, styles.destinationDot]} />
-            <Text style={styles.locationText}>{item.destination_name}</Text>
-          </View>
-        </View>
-
-        <View style={styles.rideDetails}>
-          <Text style={styles.detailText}>
-            {new Date(item.departure_time).toLocaleString()}
-          </Text>
-          <Text style={styles.detailText}>
-            {item.seats_available} seats available
-          </Text>
-        </View>
-
-        <View style={styles.hostInfo}>
-          <TouchableOpacity 
-            style={styles.hostProfile}
-            onPress={() => handleUserPress(item.host.id)}
-          >
-            <Image 
-              source={{ uri: item.host.image }} 
-              style={styles.hostImage} 
-            />
-            <Text style={styles.hostedBy}>Hosted by {item.host.name}</Text>
-          </TouchableOpacity>
-        </View>
-      </AnimatedPressable>
-    </Animated.View>
-  );
+  const isFemaleOnlyDisabled = userGender === "male";
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Available Rides</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.createButton}
           onPress={handleCreateRide}
         >
@@ -161,15 +192,18 @@ export default function RidesScreen() {
             style={styles.searchInput}
             placeholder="Search rides..."
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              filterRides(); // Trigger filtering on text change
+            }}
             placeholderTextColor={Colors.light.subtext}
           />
         </View>
       </View>
 
       <View style={styles.filtersContainer}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersScroll}
         >
@@ -178,32 +212,57 @@ export default function RidesScreen() {
               key={type.id}
               style={[
                 styles.filterButton,
-                selectedVehicleType === type.id && styles.filterButtonActive
+                selectedVehicleType === type.id && styles.filterButtonActive,
               ]}
-              onPress={() => setSelectedVehicleType(type.id)}
+              onPress={() => {
+                setSelectedVehicleType(type.id);
+                filterRides(); // Trigger filtering on vehicle type change
+              }}
             >
-              <type.icon 
-                size={16} 
-                color={selectedVehicleType === type.id ? Colors.light.card : Colors.light.text} 
+              <type.icon
+                size={16}
+                color={
+                  selectedVehicleType === type.id
+                    ? Colors.light.card
+                    : Colors.light.text
+                }
               />
-              <Text style={[
-                styles.filterButtonText,
-                selectedVehicleType === type.id && styles.filterButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  selectedVehicleType === type.id &&
+                    styles.filterButtonTextActive,
+                ]}
+              >
                 {type.label}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
 
+      <View style={[styles.filtersContainer, { flexDirection: "column" }]}>
         <TouchableOpacity
-          style={[styles.femaleOnlyButton, showFemaleOnly && styles.femaleOnlyButtonActive]}
-          onPress={() => setShowFemaleOnly(!showFemaleOnly)}
+          style={[
+            styles.femaleOnlyButton,
+            showFemaleOnly && styles.femaleOnlyButtonActive,
+            isFemaleOnlyDisabled && styles.femaleOnlyButtonDisabled,
+          ]}
+          onPress={() => {
+            if (!isFemaleOnlyDisabled) {
+              setShowFemaleOnly(!showFemaleOnly);
+              filterRides(); // Trigger filtering on female only change
+            }
+          }}
+          disabled={isFemaleOnlyDisabled}
         >
-          <Text style={[
-            styles.femaleOnlyButtonText,
-            showFemaleOnly && styles.femaleOnlyButtonTextActive
-          ]}>
+          <Text
+            style={[
+              styles.femaleOnlyButtonText,
+              showFemaleOnly && styles.femaleOnlyButtonTextActive,
+              isFemaleOnlyDisabled && styles.femaleOnlyButtonTextDisabled,
+            ]}
+          >
             Female Only
           </Text>
         </TouchableOpacity>
@@ -217,7 +276,7 @@ export default function RidesScreen() {
           onChangeText={setJoinCode}
           placeholderTextColor={Colors.light.subtext}
         />
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.joinCodeButton}
           onPress={handleJoinWithCode}
         >
@@ -225,13 +284,24 @@ export default function RidesScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={dummyRides}
-        renderItem={renderRideCard}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.ridesList}
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.light.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredRides}
+          renderItem={({ item }) => (
+            <RideCard ride={item} onUserPress={handleUserPress} />
+          )}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.ridesList}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <Text style={styles.noRidesText}>No rides available</Text>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -242,9 +312,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,
@@ -252,17 +322,17 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.light.text,
-    fontFamily: 'Inter-Bold',
+    fontFamily: "Inter-Bold",
   },
   createButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: Colors.light.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
@@ -271,8 +341,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.card,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.light.background,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -285,11 +355,11 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: Colors.light.text,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
   },
   filtersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: Colors.light.card,
@@ -300,8 +370,8 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.light.background,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -318,33 +388,43 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: Colors.light.text,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
   filterButtonTextActive: {
     color: Colors.light.card,
   },
   femaleOnlyButton: {
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: Colors.light.background,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.light.border,
+    width: "100%",
   },
   femaleOnlyButtonActive: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: "#FF69B4",
+    borderColor: "#FF69B4",
+  },
+  femaleOnlyButtonDisabled: {
+    opacity: 0.5,
   },
   femaleOnlyButtonText: {
+    textAlign: "center",
     fontSize: 14,
     color: Colors.light.text,
-    fontFamily: 'Inter-Medium',
+    fontFamily: "Inter-Medium",
   },
   femaleOnlyButtonTextActive: {
     color: Colors.light.card,
   },
+  femaleOnlyButtonTextDisabled: {
+    color: Colors.light.subtext,
+  },
   joinCodeContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,
@@ -359,7 +439,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     fontSize: 16,
     color: Colors.light.text,
-    fontFamily: 'Inter-Regular',
+    fontFamily: "Inter-Regular",
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
@@ -367,118 +447,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary,
     borderRadius: 12,
     paddingHorizontal: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   joinCodeButtonText: {
     color: Colors.light.card,
     fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: "600",
+    fontFamily: "Inter-SemiBold",
   },
   ridesList: {
     padding: 16,
   },
-  rideCard: {
-    backgroundColor: Colors.light.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  rideHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  rideInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  vehicleType: {
+  noRidesText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: Colors.light.text,
-    marginRight: 8,
-    fontFamily: 'Inter-SemiBold',
-  },
-  femaleOnlyBadge: {
-    backgroundColor: '#FFE5E5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  femaleOnlyText: {
-    fontSize: 12,
-    color: Colors.light.error,
-    fontFamily: 'Inter-Medium',
-  },
-  fareText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.light.primary,
-    fontFamily: 'Inter-SemiBold',
-  },
-  routeContainer: {
-    marginBottom: 16,
-  },
-  routePoint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  routeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.light.primary,
-    marginRight: 12,
-  },
-  destinationDot: {
-    backgroundColor: Colors.light.error,
-  },
-  routeLine: {
-    width: 2,
-    height: 20,
-    backgroundColor: Colors.light.border,
-    marginLeft: 4,
-    marginVertical: 4,
-  },
-  locationText: {
-    fontSize: 16,
-    color: Colors.light.text,
-    fontFamily: 'Inter-Regular',
-  },
-  rideDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  detailText: {
-    fontSize: 14,
     color: Colors.light.subtext,
-    fontFamily: 'Inter-Regular',
-  },
-  hostInfo: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    paddingTop: 16,
-  },
-  hostProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  hostImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
-  },
-  hostedBy: {
-    fontSize: 14,
-    color: Colors.light.text,
-    fontFamily: 'Inter-Medium',
+    textAlign: "center",
+    fontFamily: "Inter-Regular",
+    padding: 20,
   },
 });
