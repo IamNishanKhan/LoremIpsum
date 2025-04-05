@@ -14,14 +14,12 @@ import { BASE_URL } from '../api_endpoint_url';
 export default function RideDetailsScreen() {
   const { id } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('details');
-  const [message, setMessage] = useState('');
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [ride, setRide] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [chatMessages, setChatMessages] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const { showToast } = useToast();
 
@@ -58,18 +56,16 @@ export default function RideDetailsScreen() {
       const data = await response.json();
       if (response.ok) {
         setRide(data);
-        // Map members to participants format with avatar
         setParticipants(
           data.members.map((member) => ({
             id: member.id.toString(),
             name: `${member.first_name} ${member.last_name}`,
             image: member.profile_photo
               ? `${BASE_URL}${member.profile_photo}`
-              : null, // Ensure full URL for avatar
-            reviewed: false, // Adjust if API provides review status
+              : null,
+            reviewed: false,
           }))
         );
-        setChatMessages([]); // Chat messages from WebSocket
       } else {
         showToast('Failed to load ride details', 'error');
       }
@@ -82,7 +78,7 @@ export default function RideDetailsScreen() {
   const handleJoinRide = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      const response = await fetch(`${BASE_URL}/api/rides/${id}/join/`, {
+      const response = await fetch(`${BASE_URL}/api/rides/join/${id}/`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -91,7 +87,7 @@ export default function RideDetailsScreen() {
       });
       if (response.ok) {
         showToast('Successfully joined the ride!', 'success');
-        fetchRideDetails(); // Refresh to update participants
+        fetchRideDetails();
       } else {
         showToast('Failed to join ride', 'error');
       }
@@ -104,7 +100,7 @@ export default function RideDetailsScreen() {
   const handleLeaveRide = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      const response = await fetch(`${BASE_URL}/api/rides/${id}/leave/`, {
+      const response = await fetch(`${BASE_URL}/api/rides/leave/${id}/`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -143,12 +139,6 @@ export default function RideDetailsScreen() {
       showToast('Network error deleting ride', 'error');
       console.error('Error deleting ride:', error);
     }
-  };
-
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
-    setMessage('');
-    showToast('Message sent', 'success');
   };
 
   const handleReviewUser = (user) => {
@@ -263,17 +253,12 @@ export default function RideDetailsScreen() {
           <ParticipantsReviews
             participants={participants}
             currentUser={currentUser}
-            onUserPress={handleUserPress} // Enable navigation to profile
+            onUserPress={handleUserPress}
             onReviewUser={handleReviewUser}
           />
         </>
       ) : (
-        <GroupChat
-          chat={chatMessages}
-          message={message}
-          setMessage={setMessage}
-          onSendMessage={handleSendMessage}
-        />
+        <GroupChat />
       )}
 
       <Modal

@@ -1,14 +1,83 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
 import { Send } from 'lucide-react-native';
 import Colors from '../../constants/Colors';
+import { db } from '../../firebaseConfig'; // Import Firebase config
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const GroupChat = ({ chat, message, setMessage, onSendMessage }) => {
+const GroupChat = () => {
+  const { id: rideId } = useLocalSearchParams(); // Get ride ID from route params
+  const [message, setMessage] = useState('');
+  const [chatMessages, setChatMessages] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Load current user from AsyncStorage
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          setCurrentUser(JSON.parse(userData));
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+    loadUserData();
+  }, []);
+
+  // Fetch and listen to real-time chat messages from Firestore
+  useEffect(() => {
+    if (!rideId) return;
+
+    const q = query(
+      collection(db, 'ride_chats', rideId, 'messages'),
+      orderBy('timestamp', 'desc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Handle null timestamp by falling back to current date
+          timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
+        };
+      });
+      setChatMessages(messages);
+    }, (error) => {
+      console.error('Error fetching chat messages:', error);
+    });
+
+    return () => unsubscribe(); // Cleanup subscription on unmount
+  }, [rideId]);
+
+  // Send a message to Firestore
+  const onSendMessage = async () => {
+    if (!message.trim() || !currentUser) return;
+
+    try {
+      await addDoc(collection(db, 'ride_chats', rideId, 'messages'), {
+        userId: currentUser.id,
+        sender: `${currentUser.first_name} ${currentUser.last_name}`,
+        message: message.trim(),
+        timestamp: serverTimestamp(),
+      });
+      setMessage(''); // Clear input after sending
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
   const renderChatMessage = ({ item }) => (
-    <View style={[
-      styles.messageContainer,
-      item.sender === 'Ayesha' ? styles.sentMessage : styles.receivedMessage
-    ]}>
+    <View
+      style={[
+        styles.messageContainer,
+        item.userId === currentUser?.id ? styles.sentMessage : styles.receivedMessage,
+      ]}
+    >
       <Text style={styles.messageSender}>{item.sender}</Text>
       <Text style={styles.messageText}>{item.message}</Text>
       <Text style={styles.messageTime}>
@@ -20,11 +89,11 @@ const GroupChat = ({ chat, message, setMessage, onSendMessage }) => {
   return (
     <View style={styles.chatContainer}>
       <FlatList
-        data={chat}
+        data={chatMessages}
         renderItem={renderChatMessage}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.chatList}
-        inverted
+        inverted // Show newest messages at the bottom
       />
       <View style={styles.inputContainer}>
         <TextInput
@@ -35,10 +104,7 @@ const GroupChat = ({ chat, message, setMessage, onSendMessage }) => {
           placeholderTextColor={Colors.light.subtext}
           multiline
         />
-        <TouchableOpacity 
-          style={styles.sendButton}
-          onPress={onSendMessage}
-        >
+        <TouchableOpacity style={styles.sendButton} onPress={onSendMessage}>
           <Send size={20} color={Colors.light.card} />
         </TouchableOpacity>
       </View>
